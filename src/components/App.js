@@ -1,42 +1,80 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useReducer } from 'react';
 import './App.css';
 import Header from "./Header";
 import Movie from "./Movie";
 import Search from "./Search";
 
-const Movie_API_URL = process.env.OMDB_APIURL
+const Movie_API_URL = process.env.OMDB_APIURL;
+
+const initailState = {
+  loading: true,
+  movies: [],
+  errorMessage: null
+};
+
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "SEARCH_MOVIES_REQUEST":
+      return {
+        ...state,
+        loading: true,
+        errorMessage: null
+      };
+    case "SEARCH_MOVIES_SUCCESS":
+      return {
+        ...state,
+        loading: false,
+        movies: action.payload
+      };
+    case "SEARCH_MOVIES_FAILURE":
+      return {
+        ...state,
+        loading: false,
+        errorMessage: action.error
+      };
+    default:
+      return state;
+  }
+};
 
 const App = () => {
-  const [loading, setLoading] = useState(true);
-  const [movies, setMovies] = useState([]);
-  const [errorMessage, setErrorMessage] = useState(null);
+  const [state, dispatch] = useReducer(reducer, initialState);
 
     useEffect(() => {
       fetch(Movie_API_URL)
         .then(res => res.json())
         .then(jsonRes => {
-          setMovies(jsonRes.Search);
-          setLoading(false);
+          dispatch({
+            type: "SEARCH_MOVIES_SUCCESS",
+            payload: jsonRes.Search
+          });
         });
     }, []);
   
     const search = searchValue => {
-      setLoading(true);
-      setErrorMessage(null);
+      dispatch({
+        type: "SEARCH_MOVIES_REQUEST"
+      });
     
 
     fetch(`https://www.omdbapi.com/?s=${searchValue}&apikey=${process.env.OMDB_APIKEY}`)
       .then(res => res.json())
       .then(jsonRes => {
-        if(jsonRes.Response = "True") {
-          setMovies(jsonRes.Search);
-          setLoading(false);
+        if(jsonRes.Response === "True") {
+          dispatch({
+            type: "SEARCH_MOVIES_SUCCESS",
+            payload: jsonRes.Search
+          });
         } else {
-          setErrorMessage(jsonRes.Error);
-          setLoading(false);
+          dispatch({
+            type: "SEARCH_MOVIES_FAILURE",
+            error: jsonRes.Error
+          });
         }
       });
     };
+
+    const { movies, errorMessage, loading } = state;
 
     return (
       <div className="App">
